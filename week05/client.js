@@ -22,13 +22,9 @@ class Request {
     this.headers['Content-Type'] = this.bodyText.length
   }
 
-  toString(){
-    return `${this.method} ${this.path} HTTP/1.1\r
-      ${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}
-      \r
-      ${this.bodyText}
-    `
-  }
+    toString(){
+      return `${this.method} ${this.path} HTTP/1.1\r\nHOST: ${this.host}\r\n${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r\n\r\n${this.bodyText}\r\n`
+    }
 
   open(method, url){
 
@@ -48,7 +44,7 @@ class Request {
       }
       connection.on('data', (data)=>{
         parser.receive(data.toString())
-        if(parse.isFinished){
+        if(parser.isFinished){
           resolve(parser.response)
         }
         // resolve(data.toString())
@@ -110,9 +106,7 @@ class ResponseParse {
     if(this.current === this.WAITING_STATUS_LINE){
       if(char === '\r'){
         this.current = this.WAITING_HEADER_LINE_END
-      } if(char === '\n'){
-        this.current = this.WAITING_HEADER__NAME
-      }else {
+      } else {
         this.statesLine += char
       }
     }
@@ -125,7 +119,7 @@ class ResponseParse {
         this.current = this.WAITING_HEADER_SPACE
       }else if(char === '\r'){
         this.current = this.WAITING_HEADER_BLOCK_END
-        if(this.header['Transfer-Encoding'] === 'chunked'){
+        if(this.headers['Transfer-Encoding'] === 'chunked'){
           this.bodyParser = new TrunkedBodyParse()
         }
       }else {
@@ -167,7 +161,7 @@ class TrunkedBodyParse {
     this.WAITING_NEW_LINE = 3
     this.WAITING_NEW_LINE_END = 4
     this.length = 0
-    this.conetnt = []
+    this.content = []
     this.isFinished = false
     this.current = this.WAITING_LENGTH
   }
@@ -187,10 +181,11 @@ class TrunkedBodyParse {
         this.current = this.READING_TRUNK
       }
     }else if(this.current === this.READING_TRUNK){
-      this.conetnt.push(char)
+      this.content.push(char)
       this.length--
       if(this.length === 0){
-        this.current = this.READING_TRUNK
+        // this.current = this.READING_TRUNK
+        this.current = this.WAITING_NEW_LINE
       }
     }else if(this.current === this.WAITING_NEW_LINE){
       if(char === '\r'){
@@ -209,7 +204,7 @@ void async function() {
     method: 'POST',
     host: "127.0.0.1",
     path: "/",
-    port: "8088",
+    port: '8088',
     headers:{
       ["X-Foo2"]: "customed",
     },
