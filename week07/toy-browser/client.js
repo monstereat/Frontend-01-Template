@@ -1,4 +1,6 @@
 const net = require('net')
+const parser = require("./parser")
+const images = request("./images")
 
 class Request {
   // method, url = host + port +path
@@ -120,7 +122,7 @@ class ResponseParse {
       }else if(char === '\r'){
         this.current = this.WAITING_HEADER_BLOCK_END
         if(this.headers['Transfer-Encoding'] === 'chunked'){
-          this.bodyParser = new TrunkedBodyParser()
+          this.bodyParser = new TrunkedBodyParse()
         }
       }else {
         this.headerName += char
@@ -153,7 +155,7 @@ class ResponseParse {
   }
 }
 
-class TrunkedBodyParser {
+class TrunkedBodyParse {
   constructor() {
     this.WAITING_LENGTH = 0
     this.WAITING_LENGTH_LINE_END = 1
@@ -213,6 +215,14 @@ void async function() {
     }
   })
     let response = await request.send()
+
+    let dom = parser.parseHTML(response.body)
+
+    let viewport = images(800, 600)
+
+    render(viewport, dom)
+
+    viewport.save('viewport.jpg')
     console.log(response)
 }();
 
