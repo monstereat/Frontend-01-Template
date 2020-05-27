@@ -120,7 +120,7 @@ class ResponseParse {
       }else if(char === '\r'){
         this.current = this.WAITING_HEADER_BLOCK_END
         if(this.headers['Transfer-Encoding'] === 'chunked'){
-          this.bodyParser = new TrunkedBodyParse()
+          this.bodyParser = new TrunkedBodyParser()
         }
       }else {
         this.headerName += char
@@ -153,7 +153,7 @@ class ResponseParse {
   }
 }
 
-class TrunkedBodyParse {
+class TrunkedBodyParser {
   constructor() {
     this.WAITING_LENGTH = 0
     this.WAITING_LENGTH_LINE_END = 1
