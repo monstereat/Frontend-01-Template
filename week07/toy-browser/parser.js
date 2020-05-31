@@ -26,20 +26,27 @@ function match(element, selector) {
       return true
   }else if (selector.charAt(0) == '.') {
     var attr = element.attributes.filter(attr => attr.name === 'class')[0]
-    if(attr && attr.value === selector.replace('.', ''))
-      return true
+    if(attr){
+      const attrClassArray = attr.value.split(' ')
+      for(let attrClass of attrClassArray){
+        if(attrClass === selector.replace(".", '')){
+          return true
+        }
+      }
+    }
   }else {
     if(element.tagName === selector){
       return true
     }
   }
+  return false
 }
 
 
 function specificity(selector) {
   var p = [0, 0, 0, 0]
   var selectorParts = selector.split(' ')
-  for(var part of selectorParts){
+  for(let part of selectorParts){
     if(part.charAt(0) == '#') {
       p[1] += 1
     }else if (part.charAt(0) == '.') {
@@ -67,12 +74,14 @@ function computeCSS(element) {
   if(!element.computedStyle)
     element.computedStyle = {}
   for(let rule of rules){
-    var selectorParts = ruels.selectors[0].split(' ').reverse
+    var selectorParts = ruels.selectors[0].split(' ').reverse()
 
     if(!match(element, selectorParts[0]))
       continue
+    
+    let match = false
     var j = 1
-    for(var i = 0; i < element.length; i++){
+    for(let i = 0; i < element.length; i++){
       if(match(element[i], selectorParts[j])){
         j++
       }
@@ -90,12 +99,14 @@ function computeCSS(element) {
         if(!computedStyle[declaration.property].specificity) {
           computedStyle[declaration.property].value = declaration.value
           computedStyle[declaration.property].specificity = sp
-        }else if (compare(computedStyle[declaration.property], sp) < 0) {
-          for (var k = 0; k < 4; k++) {
-            computedStyle[declaration.property][declaration.value][k] += sp[k]
-          }
+        }else if (compare(computedStyle[declaration.property].specificity, sp) < 0) {
+          computedStyle[declaration.property].value = declaration
+          computedStyle[declaration.property].specificity = sp
+          // for (var k = 0; k < 4; k++) {
+          //   computedStyle[declaration.property][declaration.value][k] += sp[k]
+          // }
         }
-        console.log(element.computedStyle)
+        // console.log(element.computedStyle)
       }
 
     }
@@ -104,6 +115,7 @@ function computeCSS(element) {
 
 function emit(token){
   let top = stack[stack.length - 1]
+  console.log('tttttttttoken', token)
 
   if(token.type == 'startTag'){
     let element = {
@@ -123,9 +135,10 @@ function emit(token){
       }
 
       computeCSS(element)
-      layout(element)
+      // layout(element)
 
-      top.chhildren.push(element)
+      top.children.push(element)
+      element.parent = top
 
       if(!token.isSelfClosing)
         stack.push(element)
@@ -133,15 +146,21 @@ function emit(token){
       currentTextNode = null
     }
   }else if(token.type == "endTag"){
+    
     if(top.tagName != token.tagName){
+      console.log('top tagName', top)
+      console.log('token', token)
       throw new Error("Tag start end doesn't match!")
     } else {
       if(top.tagName === 'style'){
         addCSSRules(top.children[0].content)
       }
+      // layout(top)
+      console.log('style', top.tagName)
       stack.pop()
     }
-    layout(top)
+    // layout(top)
+    currentTextNode = null
   } else if(token.type == 'text'){
     if(currentTextNode == null){
       currentTextNode = {
@@ -159,6 +178,11 @@ const EOF = Symbol("EOF")
 function data(c) {
   if(c == "<"){
     return tagOpen;
+  }else if(c == EOF){
+    emit({
+      type: "EOF"
+    })
+    return
   }else{
     emit({
       type: "text",
@@ -176,29 +200,29 @@ function tagOpen(c){
       type: "startTag",
       tagName: ""
     }
-      return tagName(c)
+    return tagName(c)
   }else{
-    emit({
-      type: "text",
-      content: c
-    })
-    return ;
+    // emit({
+    //   type: "text",
+    //   content: c
+    // })
+    // return ;
   }
 }
 
 function tagName(c){
   if(c.match(/^[\t\n\f ]$/)){
-    return beforeAttributeName
+    return beforeAttributeName(c)
   } else if(c == "/") {
-    return isSelfClosingStartTag;
-  } else if(c.match(/^[A-Z]$/)) {
-    currentToken.tagName += c
+    return selfClosingStartTag;
+  } else if(c.match(/^[a-zA-Z]$/)) {
+    currentToken.tagName += c.toLowerCase()
     return tagName
   } else if(c == ">") {
     emit(currentToken)
     return data
   } else {
-    currentToken.tagName += c
+    // currentToken.tagName += c
     return tagName
   }
 }
@@ -209,7 +233,7 @@ function beforeAttributeName(c){
   } else if( c == "/" || c == ">" || c == EOF){
     return afterAttributeName(c)
   } else if( c == "=") {
-
+    return
   } else {
     currentAttribute = {
       name: "",
@@ -227,8 +251,8 @@ function attributeName(c) {
      return beforeAttributeValue
   }else if( c == "\u0000"){
 
-  }else if(c == "\"" || c == "'" || c == "<"){
-
+  }else if(c == "\"" || c == "\'" || c == "<"){
+    return attributeName
   }else {
     currentAttribute.name += c
     return attributeName;
@@ -264,7 +288,7 @@ function doubleQuotedAttributeValue(c) {
 }
 
 function singleQuotedAttributeValue(c) {
-  if( c == "\""){
+  if( c == "\'"){
     currentToken[currentAttribute.name] = currentAttribute.value;
     return afterQuotedAttributeValue;
   }else if( c == "\u0000") {
@@ -274,7 +298,7 @@ function singleQuotedAttributeValue(c) {
   }else {
     currentAttribute.value += c;
     // singleQuotedAttributeValue
-    return doubleQuotedAttributeValue
+    return singleQuotedAttributeValue
   }
 }
 
@@ -301,6 +325,7 @@ function UnquotedAttributeValue(c) {
     currentToken[currentAttribute.name] = currentAttribute.value;
     return beforeAttributeName;
   }else if (c == "/") {
+    currentToken[currentAttribute.name] = currentAttribute.value
     return selfClosingStartTag
   }else if (c == ">") {
     currentToken[currentAttribute.name] = currentAttribute.value;
@@ -308,19 +333,19 @@ function UnquotedAttributeValue(c) {
     return data;
   }else if (c == "\u0000") {
 
-  }else if (c == "\"" || c == " " || c == "<" || c == "=" || c == "`") {
+  }else if (c == "\"" || c == "\'" || c == "<" || c == "=" || c == "`") {
 
   }
   else if (c == EOF) {
 
   }else {
-    currentAttribute += c;
+    currentAttribute.value += c;
     return UnquotedAttributeValue;
   }
 }
 
 function selfClosingStartTag(c){
-  if(c == ">") {
+  if(c == ">" || c == "/") {
     currentToken.isSelfClosing = true;
     emit(currentToken)
     return data;
@@ -342,14 +367,12 @@ function endTagOpen(c) {
 
   }else if (c == EOF) {
 
-  }else {
-
   }
 }
 
 
 function afterAttributeName(c) {
-  if(c.match(/^[a-zA-Z]$/)){
+  if(c.match(/^[\t\n\f ]$/)){
     return afterAttributeName
   }else if (c == "/") {
     return selfClosingStartTag;
@@ -360,7 +383,7 @@ function afterAttributeName(c) {
     emit(currentToken)
     return data;
   }else if (c == EOF) {
-
+    return
   }else {
     currentToken[currentAttribute.name] = currentAttribute.value
     currentAttribute = {
