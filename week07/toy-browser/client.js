@@ -29,9 +29,6 @@ class Request {
       return `${this.method} ${this.path} HTTP/1.1\r\nHOST: ${this.host}\r\n${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r\n\r\n${this.bodyText}\r\n`
     }
 
-  open(method, url){
-
-  }
   send(connection) {
     return new Promise((resolve, reject)=>{
       const parser = new ResponseParse;
@@ -70,7 +67,7 @@ class response {
 class ResponseParse {
   constructor(){
     this.WAITING_STATUS_LINE = 0
-    this.WAITING_STATUS_LINE_END = 0
+    this.WAITING_STATUS_LINE_END = 1
     this.WAITING_HEADER__NAME = 2
     this.WAITING_HEADER_SPACE = 3
     this.WAITING_HEADER_VALUE = 4
@@ -163,6 +160,8 @@ class TrunkedBodyParse {
     this.READING_TRUNK = 2
     this.WAITING_NEW_LINE = 3
     this.WAITING_NEW_LINE_END = 4
+    this.FINISHED_NEW_LINE = 5
+    this.FINISHED_NEW_LINE_END = 6
     this.length = 0
     this.content = []
     this.isFinished = false
@@ -172,9 +171,10 @@ class TrunkedBodyParse {
     if(this.current === this.WAITING_LENGTH){
       if(char === '\r'){
         if(this.length === 0){
-          this.isFinished = true
+          this.isFinished = this.FINISHED_NEW_LINE
+        }else{
+          this.current = this.WAITING_LENGTH_LINE_END
         }
-        this.current = this.WAITING_LENGTH_LINE_END
       }else {
         this.length *= 16
         this.length += parseInt(char, 16)
@@ -194,10 +194,18 @@ class TrunkedBodyParse {
       if(char === '\r'){
         this.current = this.WAITING_NEW_LINE_END
       }
-    }else if(this.current === this.WAITING_LENGTH_LINE_END){
+    }else if(this.current === this.WAITING_NEW_LINE_END){
       if(char === '\n'){
         this.current = this.WAITING_LENGTH
       }
+    }else if(this.current === this.FINISHED_NEW_LINE) {
+      if(char === '\R'){{
+        this.current = this.FINISHED_NEW_LINE_END
+      }}
+    }else if(this.current === this.isFinished) {
+      if(char === '\n'){{
+        this.isFinished = true
+      }}
     }
   }
 }
@@ -216,8 +224,10 @@ void async function() {
     }
   })
     let response = await request.send()
-
+    console.log('rsponse', response)
+    
     let dom = parser.parseHTML(response.body)
+    console.log('dom', dom)
 
     let viewport = images(800, 600)
 
