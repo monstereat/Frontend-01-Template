@@ -13,7 +13,6 @@
   "author": "cd",
   "license": "ISC",
   "dependencies": {
-    "css": "^2.2.4",
-    "images": "^3.0.2"
+    "css": "^2.2.4"
   }
 }
