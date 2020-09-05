@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style>
+      .cell{
+        width: 100px;
+        height: 100px;
+        board: solid 1px white;
+        background-color:　white
+
+         -->
+      }
+    </style>
+  </head>
+  <body>
+    <div id="board">
+
+    </div>
+    <script type="text/javascript">
+      let board = douument.getElementById("board")
+      for(let i = 0; i < 3; i++){
+        for(let j = 0; j < 3; j++){
+          let cell = document.createElement('div')
+
+          cell.innerHTML =
+            pattern[i][j] == 2 ? '❌':
+            pattern[i][j] == 2 ? '⭕️':
+            ''
+
+          board.appendChild(cell)
+        }
+
+      }
+    </script>
+  </body>
+</html>
